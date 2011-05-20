@@ -55,11 +55,26 @@ the model is arbitrarily wrong.
 \end{abstract}
 
 
+%contribution: if the approximated model is good, it will converge faster than flat SARSA. 
+%if not, it still converge eventually
+%model-based approach is hard, they cannot figure out the correct Q value because the design of the model is biased
+%model-free is ok because it doesn't require a model
+%A fail safe mechanism to ensure that approximated model-based approach may
+%converge to optimal policy even when the model is approximated
+%converge even when our model is biased
+%if the model worked--> converge to optimal policy fast
+%if not, it will converge to the optimal policy anyway
 %1. Motivate the purpose: 
+   %0. the factered model is intrinsticly biased for non factored one
    %1. the power of model based approach (introduce the previous work and the lack of approximation)
-   %2. previous work on approximated model based approach
+   %2. previous work on approximated model based approach (2 actions and n steps is O(2^n))
    %2. previous work on model-based HRL
    %3. previous work on hybrid approach (no guaranntee on a approximated model) (all coarse to fine approach)
+   %4. introduce HORDQ
+   %5. the problem of HORDQ: worse than flat Q without transfer, our sol: add internal reward
+   %6. our contribution: show that the important property is that it will converge to optimal policy for any planner
+   %7. our contribution: combine with model-based approach (HORDQ is userful when we combine it with some approximated model)
+   %8. a natural extension: use high internal reward in the beginning and decrease it in the end
    %Hierarchical Policy Gradient Algorithms
 %2. Introduction on MAXQ
 %3. Biased model
@@ -72,10 +87,12 @@ the model is arbitrarily wrong.
 %6. The three optimality (recursive optimality is not possible(model is approximated) bottom node recursive optimal is bad (always select get passenger),hierarchical optimality is impossible. the only hope is optimal)
 %7. the respect of the hierarchy
 %8. The experiment (school bus problem)
-%9. The optimality cannot be achieved with recursive optimal
-%10. With HORDQ, it is possible but slow
+%9. The optimality cannot be achieved with recursive optimal (random planner with MAXQ --> the problem of existing approximation approach)
+%10. With HORDQ, it is possible but slow (random planner with HORDQ)
 %11. with appropriate penality it can be faster
+%12. it works well if sometimes the model works and sometimes don't --> the agent can learn when to trust the planner (main contribution)
 %12. why we don't use TAXI domain
+%13. say that only model-free node has the Qe term
 
 %show that hierarchical optimal policy becomes optimal policy when all primitive actions
 %are available for all s in s_i
@@ -85,6 +102,232 @@ the model is arbitrarily wrong.
 %Show that after modification, the hierarchical optimality can be achieved and it is equal to optimality
 
 \section{Introduction}
+The methods of model-based reinforcement learning learns a effective policy by 
+by learning the model from samples and simulating experiences
+from the model. It generally requires less samples to find the optimal policy. 
+However, when the state space is too large, we cannot build the exact model anymore.
+Instead, we have to approximate the transition probability function and 
+reward function. Few works address the problem of model-based reinforcement learning
+with approximation in an online setting.
+
+Hester and Stone empirically compared on the effectiveness of 
+approximation techniques with several reinforcement problems.
+However, they didn't address the problem of generating 
+new samples when the state space is too large to enumerate
+all possible states.
+Sutton et al. handled this problem by predicting the feature of the next state by linear function approximation.
+Degris et al.  decision trees to learn a model of
+Despite there effort, we note that 
+
+supervised learning techniques to learn the model.
+Sutton et al. handles by predicting the feature of the next state by linear function approximation.
+Degris et al. 
+Degris et al. [3] use decision trees to learn a model of
+the MDP. A
+
+We note that, however, for a stochastic environment, the size of planning envelope grows exponentially with the number of planning
+steps. Predicting the next state is not enough since we may encounter different next states with the same state and action choice.
+If we predict more than one states for each step, we will have a planning envelope which grows exponentially with the number of planning
+steps. We need a way to restrict the size of planning envelope. Our idea is to separate the variables to planning variables 
+and environment variables. We compute all of the possible values of planning variables, while assuming 
+the environment variables to be static throughout the planning process.  
+It seems that we over-simplifies the problem. Nevertheless, there are many applications
+in which we can find some small set of variables which are more important than others. Take 
+mobile robot navigation problem for example, 
+what we concerned is the locaiton of the agent, 
+for other slowing objects in surronding environment may not be a concerned 
+Our contribution
+
+
+There has been little previous work addressing planning
+with linear function approximation in an online setting.
+
+Our model seems over-simplified, however, there are some variables which are more 
+infunential than others in many problems, it is reasonable to spend more resources
+to model these variables. Take path for example.
+Besides, a inevitable problem is the size of planning envelope. It 
+We enumerate all possible states.
+we separate the varible into planning variable and environment variables.
+We only model the transition for planning varialbe and assuming environment variables are
+static throughout the planning process.
+One motivation application is the navigation problem. In navigation task,
+what we concerned is the locaiton of the agent, 
+for other slowing objects in surronding environment may not be a concerned 
+since they do not have significant impact on our plan
+Thus we can assign the location
+as the planning variable and keep the rest of the information as environment variable.
+With the approximation, we can significatly reduce the size of the planning envelope.
+We don't have the trouble 
+Hester and Stone provides an empirical comparison on several popular 
+supervised learning techniques to learn the model.
+Sutton et al. handles by predicting the feature of the next state by linear function approximation.
+Degris et al. 
+Degris et al. [3] use decision trees to learn a model of
+the MDP. A
+A separate decision tree is built to predict each
+next state feature as well as the reward. Their algorithm
+attempts to predict the absolute transition function, while
+our approach is to predict the relative effects of transitions,
+which may be easier in many domains. Degris et al.’s algo-
+rithm calculates an ǫ-greedy policy through value iteration
+based on the model provided by the decision trees.
+
+
+
+
+Instead, we need a approximated model
+
+There has been little previous work addressing planning
+with linear function approximation in an online setting.
+Paduraru (2007) treated this case, focusing mainly on sampling
+stochastic models of a cascading linear form, but
+also briefly discussing deterministic linear models. Degris,
+Sigaud and Wuillemin (2006) developed a version of Dyna
+based on approximations in the form of dynamic Bayes networks
+and decision trees. Their system, SPITI, included
+online learning and planning based on an incremental version
+of structured value iteration (Boutilier, Dearden &
+Goldszmidt 2000).
+
+
+
+
+Reinforcement learning (RL) studies the problem of
+finding effective solutions to sequential decision mak-
+ing problems (Sutton & Barto, 1998). For many
+agent-based applications, it is critical that an RL al-
+gorithm be very sample efficient: that it takes very
+few actions to learn an effective policy. We focus on
+sample efficiency as the key evaluation criterion for
+RL algorithms because in many agent-based applica-
+tions, acquiring experiences can be very expensive and
+time-consuming. Two of the main approaches towards
+this goal are to incorporate generalization (function
+approximation) into model-free methods and to de-
+velop model-based algorithms. Model-based methods
+achieve high sample efficiency by learning a model of
+the domain and simulating experiences in their model,
+thus saving precious samples in the real world.
+This paper is motivated primarily by the observation
+that the world is too large to explore exhaustively.
+Consider, for example, the act of identifying your fa-
+vorite restaurant. One possible strategy is to visit the
+restaurants in order of their distances from your house,
+visiting closest ones first. In most American cities, do-
+ing so would likely lead you to visit several pizza par-
+lors, fast food joints, and coffee shops before getting to
+many gourmet establishments. Nonetheless, provided
+that you have time to try every restaurant, eventually
+you will find your favorite one.
+
+The first of these advances is model-based RL. Early work in this direction
+demonstrated that summarizing an agent’s experience into a model facilitates
+the efficient reuse of data [1]. Later work investigated how the uncertainty in
+the model can guide exploration, yielding the first (probabilistic) finite bounds
+on the amount of data required to learn near-optimal behaviors [2,3]. Still, these
+guarantees require that the agent exhaustively explore every state. Particularly
+in large domains, this exploration can be impractical.
+Third, hierarchical decomposition is perhaps the most intuitively appealing
+extension of the standard approach, since we would like to imbue our learning
+algorithms with the same awareness of structure that seems to allow us to
+cope with the extraordinary complexity of the real world. Hierarchical RL has
+been explored via work on temporal abstraction, in which temporally extended
+abstract actions allow agents to reason above the level of primitive actions [6].
+However, we still do not have a complete understanding of how hierarchy benefits
+learning and therefore how to design or discover hierarchies.
+
+Second, function approximation allows RL to cope with large or even infinite
+state spaces by introducing generalization. It allows an algorithm to approximate
+the long-term value of every action in every state using only a relatively
+small set of parameters. Many state-of-the-art approaches employ model-free
+algorithms and representations that attempt to estimate these values directly
+from data [4,5], but they often st
+
+Reinforcement learning studies the problem
+of solving sequential decision making prob-
+lems. Model-based methods learn an effec-
+tive policy in few actions by learning a model
+of the domain and simulating experience in
+their models. Typical model-based methods
+must visit each state at least once, which
+can be infeasible in large domains. To over-
+
+Each interaction provides additional
+information that can be used to learn a better model of the
+world’s dynamics, and because this change could result in a
+different action being best (given the model), the planning
+process should be repeated to take this into account. However,
+planning is inherently a complex process; on large
+problems it not possible to repeat it on every time step without
+greatly slowing down the response time of the system.
+
+\cite{approxModel}
+There has been little previous work addressing planning
+with linear function approximation in an online setting.
+Paduraru (2007) treated this case, focusing mainly on sampling
+stochastic models of a cascading linear form, but
+also briefly discussing deterministic linear models. Degris,
+Sigaud and Wuillemin (2006) developed a version of Dyna
+based on approximations in the form of dynamic Bayes networks
+and decision trees. Their system, SPITI, included
+online learning and planning based on an incremental version
+of structured value iteration (Boutilier, Dearden &
+Goldszmidt 2000).
+
+The factored Markov Decision Process (FMDP) is a formalism for sequential decision problems
+that allows for the explicit representation of environmental structure not possible in the traditional
+Markov Decision Process (MDP). Much work in the reinforcement learning literature has focused
+on algorithms that exploit this structure to more efficiently learn or compute optimal solutions to
+such problems [1, 2]. In some cases this has allowed for the application of reinforcement learning
+techniques to environments much larger than could otherwise be handled feasibly by methods that
+do not exploit structure. These approaches generally make use of structure by ignoring regions or
+entire dimensions of the state space that are irrelevant to solving a particular task. Many of these
+approaches make use of factored transition and reward models to represent these independencies.
+The majority of work with FMDPs has focused on discrete environments; i.e., those with a finite
+number of states and actions. Some of these approaches have presented methods for learning a
+factored transition model online from experience, and for using that model to compute optimal
+policies [3, 4, 5].
+
+Each interaction provides additional
+information that can be used to learn a better model of the
+world’s dynamics, and because this change could result in a
+different action being best (given the model), the planning
+process should be repeated to take this into account. However,
+planning is inherently a complex process; on large
+problems it not possible to repeat it on every time step without
+greatly slowing down the response time of the system.
+
+
+Reinforcement learning studies the problem
+of solving sequential decision making prob-
+lems. Model-based methods learn an effec-
+tive policy in few actions by learning a model
+of the domain and simulating experience in
+their models. Typical model-based methods
+must visit each state at least once, which
+can be infeasible in large domains. To over-
+come this problem, the model learning algo-
+rithm needs to generalize knowledge to un-
+seen states and provide information about
+the states in which it needs more experi-
+ence. In this paper, we use existing super-
+vised learning techniques to learn the model
+of the domain. We empirically compare their
+effectiveness at generalizing knowledge across
+states on three different domains. Our results
+indicate that tree-based models perform the
+best after training on a small number of tran-
+sitions, while support vector machines per-
+form the best after a large number of transi-
+tions.
+1.
+
+
+%say the benefit of model-based RL (peter's model based HRL, 
+%illustrate the problem of model-based RL
+
+%show that it can be resolved by HRL
+%say other HRL work, but no one addresses the optimality with biased model
 
 At higher level, we use model-based approach to do the planning on a coarser state representation. 
 At lower level, model-free approach is used....
@@ -163,7 +406,8 @@ In this work, we follow the MaxQ hierarchy defined in \cite{MaxQ}:
     \begin{itemize}{}
     \item $T_i$ is a termination predicate. It partitions state space $S$ into active states $S_i$ and
                 terminal states $T_i$. If subtask $M_i$ enters any terminal states, it terminates immediately
-                and the control to the parent subtask. 
+                and return the control to the parent subtask. A parent subtask cannot execute the subtask
+                $M_i$ if the current state belongs to $T_i$.
     \item $A_i$ is a set actions which are available to subtask $M_i$. An action can be either primitive or composite.
                 If it is composite, it pass execution to the corresponding subtask. No recursive calls 
                 are allowed in the hierarchy.
@@ -376,7 +620,7 @@ The execution path tells us the order of subtasks which will be invoked for stat
 \begin{theorem}
     If $\mathbb{C}(H)$ is a total leaf cover, we have $Q^*(i, s, a) = Q^*(s, a), \forall i \in \mathbb{C}(H)$
 \end{theorem}
-Proof: Let $\pi_{\bar{\mathbb{C}}}: \mathbb{C}(H) \times S \rightarrow \mathbb{C}(H)$ be the policy to invoke
+\textbf{Proof:} Let $\pi_{\bar{\mathbb{C}}}: \mathbb{C}(H) \times S \rightarrow \mathbb{C}(H)$ be the policy to invoke
 the next subtask $j = \pi_{\bar{\mathbb{C}}}(i, s)$ which belongs to $\mathbb{C}(H)$. It is determined
 by the policy of subtasks which do not belong to $\mathbb{C}(H)$ and terminate predicate $T_i$. Follow Bellman's equation, we have:
 \begin{align}
@@ -396,7 +640,7 @@ Compare to the Bellman equation of the flat MDP:
 The equations \ref{eq:MaxIrr} and \ref{eq:bellman} are identical except for the Q values.
 Due to uniqueness of Bellman equation, if $\pi_i(s) = \pi_f(s), \forall s$, we will have $Q^{\pi_f}(s, a) = Q^{\pi_f}(i, s, a)$. 
 If $\pi_i(s) = \pi^*_f(s)$, $Q^*(s, a)$ is a solution and also an optimal solution (why?) of equation \ref{eq:MaxIrr}.
-Thus we have $Q^*(i, s, a) = Q^*(s, a)$. \textbf{QED.}
+Thus we have $Q^*(i, s, a) = Q^*(s, a)$. \textbf{Q.E.D.}
 
 %\begin{definition}
     %$\mathbb{C}(H) = \{N_1, N_2, \dots, N_k\}$ is a leaf cover of MaxQ hierarchy $H$ if 
@@ -549,45 +793,7 @@ tables. The table number and title always appear before the table. See
 Table~\ref{sample-table}.
 
 Place one line space before the table title, one line space after the table
-title, and one line space after the table. The table title must be lower case
-(except for first word and proper nouns); tables are numbered consecutively.
-
-\begin{table}[t]
-\caption{Sample table title}
-\label{sample-table}
-\begin{center}
-\begin{tabular}{ll}
-\multicolumn{1}{c}{\bf PART}  &\multicolumn{1}{c}{\bf DESCRIPTION}
-\\ \hline \\
-Dendrite         &Input terminal \\
-Axon             &Output terminal \\
-Soma             &Cell body (contains cell nucleus) \\
-\end{tabular}
-\end{center}
-\end{table}
-
-
-
-
-\subsubsection*{Acknowledgments}
-
-Use unnumbered third level headings for the acknowledgments. All
-acknowledgments go at the end of the paper. Do not include 
-acknowledgments in the anonymized submission, only in the 
-final paper. 
-
-\subsubsection*{References}
-
-References follow the acknowledgments. Use unnumbered third level heading for
-the references. Any choice of citation style is acceptable as long as you are
-consistent. It is permissible to reduce the font size to `small' (9-point) 
-when listing the references. {\bf Remember that this year you can use
-a ninth page as long as it contains \emph{only} cited references.}
-
-\small{
-[1] Alexander, J.A. \& Mozer, M.C. (1995) Template-based algorithms
-for connectionist rule extraction. In G. Tesauro, D. S. Touretzky
-and T.K. Leen (eds.), {\it Advances in Neural Information Processing
+title, and one line space after the table. The table title must be lower caseggg
 Systems 7}, pp. 609-616. Cambridge, MA: MIT Press.
 
 [2] Bower, J.M. \& Beeman, D. (1995) {\it The Book of GENESIS: Exploring
@@ -600,4 +806,8 @@ in rat hippocampal region CA3. {\it Journal of Neuroscience}
 {\bf 15}(7):5249-5262.
 }
 
+{\small
+\bibliographystyle{plain}
+\bibliography{biblio}
+}
 \end{document}
