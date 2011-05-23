@@ -93,6 +93,7 @@ the model is arbitrarily wrong.
 %12. it works well if sometimes the model works and sometimes don't --> the agent can learn when to trust the planner (main contribution)
 %12. why we don't use TAXI domain
 %13. say that only model-free node has the Qe term
+%14. do I need to include algorithm
 
 %show that hierarchical optimal policy becomes optimal policy when all primitive actions
 %are available for all s in s_i
@@ -102,6 +103,11 @@ the model is arbitrarily wrong.
 %Show that after modification, the hierarchical optimality can be achieved and it is equal to optimality
 
 \section{Introduction}
+
+%hard to learn a model: non-smothness of probability and reward function, factoered assumtion, size of planning envelope
+%cannot give any optimality guarantees,
+
+
 The methods of model-based reinforcement learning learns a effective policy by 
 by learning the model from samples and simulating experiences
 from the model. It generally requires less samples to find the optimal policy. 
