@@ -1,0 +1,314 @@
+
+
+Reinforcement learning methods can broadly be divided into two classes, model-based and model-free. Consider the problem illustrated in the
+figure, of deciding which route to take on the way home from work on Friday evening. We can abstract this task as having states (in this case,
+locations, notably of junctions), actions (e.g. going straight on or turning left or right at every intersection), probabilities of transitioning from one
+state to another when a certain action is taken (these transitions are not necessarily deterministic, e.g. due to road works and bypasses), and
+positive or negative outcomes (i.e. rewards or costs) at each transition from scenery, traffic jams, fuel consumed, etc. (which are again
+probabilistic).
+Model-based computation, illustrated in the left ‘thought bubble’, is akin to searching a mental map (a forward model of the task) that has been
+learned based on previous experience. This forward model comprises knowledge of the characteristics of the task, notably, the probabilities of
+different transitions and different immediate outcomes. Model-based action selection proceeds by searching the mental map to work out the longrun
+value of each action at the current state in terms of the expected reward of the whole route home, and chooses the action that has the highest
+value.
+Model-free action selection, by contrast, is based on learning these long-run values of actions (or a preference order between actions) without
+either building or searching through a model. RL provides a number of methods for doing this, in which learning is based on momentary
+inconsistencies between successive estimates of these values along sample trajectories. These values, sometimes called cached values because
+of the way they store experience, encompass all future probabilistic transitions and rewards in a single scalar number that denotes the overall future
+worth of an action (or its attractiveness compared with other actions). For instance, as illustrated in the right ‘thought bubble’, experience may have
+taught the commuter that on Friday evenings the best action at this intersection is to continue straight and avoid the freeway.
+Model-free methods are clearly easier to use in terms of online decision-making; however, much trial-and-error experience is required to make the
+values be good estimates of future consequences. Moreover, the cached values are inherently inflexible: although hearing about an unexpected
+traffic jam on the radio can immediately affect action selection that is based on a forward model, the effect of the traffic jam on a cached propensity
+such as ‘avoid the freeway on Friday evening’ cannot be calculated without further trial-and-error learning on days in which this traffic jam occurs.
+Changes in the goal of behavior, as when moving to a new house, also expose the differences between the methods: whereas model-based
+decision making can be immediately sensitive to such a goal-shift, cached values are again slow to change appropriately. Indeed, many of us have
+experienced this directly in daily life after moving house. We clearly know the location of our new home, and can make our way to it by
+concentrating on the new route; but we can occasionally take an habitual wrong turn toward the old address if our minds wander. Such
+introspection, and a wealth of rigorous behavioral studies (see [15], for a review) suggests that the brain employs both model-free and model-based
+decision-making strategies in parallel, with each dominating in different circumstances [14]. Indeed, somewhat different neural substrates underlie
+each one [17].
+
+
+We do not need to model all transition of all variables in the MDP.
+We note that, however, for a stochastic environment, the size of planning envelope grows exponentially with the number of planning
+steps. Predicting the next state is not enough since we may encounter different next states with the same state and action choice.
+If we predict more than one states for each step, we will have a planning envelope which grows exponentially with the number of planning
+steps. We need a way to restrict the size of planning envelope. Our idea is to separate the variables to planning variables 
+and environment variables. We compute all of the possible values of planning variables, while assuming 
+the environment variables to be static throughout the planning process.  
+It seems that we over-simplifies the problem. Nevertheless, there are many applications
+in which we can find some small set of variables which are more important than others. Take 
+mobile robot navigation problem for example, 
+what we concerned is the locaiton of the agent, 
+for other slowing objects in surronding environment may not be a concerned 
+Our contribution
+
+
+There has been little previous work addressing planning
+with linear function approximation in an online setting.
+
+Our model seems over-simplified, however, there are some variables which are more 
+infunential than others in many problems, it is reasonable to spend more resources
+to model these variables. Take path for example.
+Besides, a inevitable problem is the size of planning envelope. It 
+We enumerate all possible states.
+we separate the varible into planning variable and environment variables.
+We only model the transition for planning varialbe and assuming environment variables are
+static throughout the planning process.
+One motivation application is the navigation problem. In navigation task,
+what we concerned is the locaiton of the agent, 
+for other slowing objects in surronding environment may not be a concerned 
+since they do not have significant impact on our plan
+Thus we can assign the location
+as the planning variable and keep the rest of the information as environment variable.
+With the approximation, we can significatly reduce the size of the planning envelope.
+We don't have the trouble 
+A separate decision tree is built to predict each
+next state feature as well as the reward. Their algorithm
+attempts to predict the absolute transition function, while
+our approach is to predict the relative effects of transitions,
+which may be easier in many domains. Degris et al.’s algo-
+rithm calculates an ǫ-greedy policy through value iteration
+based on the model provided by the decision trees.
+
+
+
+
+Instead, we need a approximated model
+
+There has been little previous work addressing planning
+with linear function approximation in an online setting.
+Paduraru (2007) treated this case, focusing mainly on sampling
+stochastic models of a cascading linear form, but
+also briefly discussing deterministic linear models. Degris,
+Sigaud and Wuillemin (2006) developed a version of Dyna
+based on approximations in the form of dynamic Bayes networks
+and decision trees. Their system, SPITI, included
+online learning and planning based on an incremental version
+of structured value iteration (Boutilier, Dearden &
+Goldszmidt 2000).
+
+
+
+
+Reinforcement learning (RL) studies the problem of
+finding effective solutions to sequential decision mak-
+ing problems (Sutton & Barto, 1998). For many
+agent-based applications, it is critical that an RL al-
+gorithm be very sample efficient: that it takes very
+few actions to learn an effective policy. We focus on
+sample efficiency as the key evaluation criterion for
+RL algorithms because in many agent-based applica-
+tions, acquiring experiences can be very expensive and
+time-consuming. Two of the main approaches towards
+this goal are to incorporate generalization (function
+approximation) into model-free methods and to de-
+velop model-based algorithms. Model-based methods
+achieve high sample efficiency by learning a model of
+the domain and simulating experiences in their model,
+thus saving precious samples in the real world.
+This paper is motivated primarily by the observation
+that the world is too large to explore exhaustively.
+Consider, for example, the act of identifying your fa-
+vorite restaurant. One possible strategy is to visit the
+restaurants in order of their distances from your house,
+visiting closest ones first. In most American cities, do-
+ing so would likely lead you to visit several pizza par-
+lors, fast food joints, and coffee shops before getting to
+many gourmet establishments. Nonetheless, provided
+that you have time to try every restaurant, eventually
+you will find your favorite one.
+
+The first of these advances is model-based RL. Early work in this direction
+demonstrated that summarizing an agent’s experience into a model facilitates
+the efficient reuse of data [1]. Later work investigated how the uncertainty in
+the model can guide exploration, yielding the first (probabilistic) finite bounds
+on the amount of data required to learn near-optimal behaviors [2,3]. Still, these
+guarantees require that the agent exhaustively explore every state. Particularly
+in large domains, this exploration can be impractical.
+Third, hierarchical decomposition is perhaps the most intuitively appealing
+extension of the standard approach, since we would like to imbue our learning
+algorithms with the same awareness of structure that seems to allow us to
+cope with the extraordinary complexity of the real world. Hierarchical RL has
+been explored via work on temporal abstraction, in which temporally extended
+abstract actions allow agents to reason above the level of primitive actions [6].
+However, we still do not have a complete understanding of how hierarchy benefits
+learning and therefore how to design or discover hierarchies.
+
+Second, function approximation allows RL to cope with large or even infinite
+state spaces by introducing generalization. It allows an algorithm to approximate
+the long-term value of every action in every state using only a relatively
+small set of parameters. Many state-of-the-art approaches employ model-free
+algorithms and representations that attempt to estimate these values directly
+from data [4,5], but they often st
+
+Reinforcement learning studies the problem
+of solving sequential decision making prob-
+lems. Model-based methods learn an effec-
+tive policy in few actions by learning a model
+of the domain and simulating experience in
+their models. Typical model-based methods
+must visit each state at least once, which
+can be infeasible in large domains. To over-
+
+Each interaction provides additional
+information that can be used to learn a better model of the
+world’s dynamics, and because this change could result in a
+different action being best (given the model), the planning
+process should be repeated to take this into account. However,
+planning is inherently a complex process; on large
+problems it not possible to repeat it on every time step without
+greatly slowing down the response time of the system.
+
+\cite{approxModel}
+There has been little previous work addressing planning
+with linear function approximation in an online setting.
+Paduraru (2007) treated this case, focusing mainly on sampling
+stochastic models of a cascading linear form, but
+also briefly discussing deterministic linear models. Degris,
+Sigaud and Wuillemin (2006) developed a version of Dyna
+based on approximations in the form of dynamic Bayes networks
+and decision trees. Their system, SPITI, included
+online learning and planning based on an incremental version
+of structured value iteration (Boutilier, Dearden &
+Goldszmidt 2000).
+
+The factored Markov Decision Process (FMDP) is a formalism for sequential decision problems
+that allows for the explicit representation of environmental structure not possible in the traditional
+Markov Decision Process (MDP). Much work in the reinforcement learning literature has focused
+on algorithms that exploit this structure to more efficiently learn or compute optimal solutions to
+such problems [1, 2]. In some cases this has allowed for the application of reinforcement learning
+techniques to environments much larger than could otherwise be handled feasibly by methods that
+do not exploit structure. These approaches generally make use of structure by ignoring regions or
+entire dimensions of the state space that are irrelevant to solving a particular task. Many of these
+approaches make use of factored transition and reward models to represent these independencies.
+The majority of work with FMDPs has focused on discrete environments; i.e., those with a finite
+number of states and actions. Some of these approaches have presented methods for learning a
+factored transition model online from experience, and for using that model to compute optimal
+policies [3, 4, 5].
+
+Each interaction provides additional
+information that can be used to learn a better model of the
+world’s dynamics, and because this change could result in a
+different action being best (given the model), the planning
+process should be repeated to take this into account. However,
+planning is inherently a complex process; on large
+problems it not possible to repeat it on every time step without
+greatly slowing down the response time of the system.
+
+
+Reinforcement learning studies the problem
+of solving sequential decision making prob-
+lems. Model-based methods learn an effec-
+tive policy in few actions by learning a model
+of the domain and simulating experience in
+their models. Typical model-based methods
+must visit each state at least once, which
+can be infeasible in large domains. To over-
+come this problem, the model learning algo-
+rithm needs to generalize knowledge to un-
+seen states and provide information about
+the states in which it needs more experi-
+ence. In this paper, we use existing super-
+vised learning techniques to learn the model
+of the domain. We empirically compare their
+effectiveness at generalizing knowledge across
+states on three different domains. Our results
+indicate that tree-based models perform the
+best after training on a small number of tran-
+sitions, while support vector machines per-
+form the best after a large number of transi-
+tions.
+
+%3.3 Local versus Global Optimality
+%Using hierarchy reduces the size of the space that must be searched to find a good policy.
+%However, a hierarchy constrains the space of possible policies so that it may not be
+%possible to represent the optimal policy or its value function, and hence make it impossible
+%to learn the optimal policy. If we cannot learn the optimal policy, the next best target
+%would be to learn the best policy that is consistent with the given hierarchy. Two notions of
+%optimality have been explored in the previous work on hierarchical reinforcement learning,
+%hierarchical optimality and recursive optimality (Dietterich, 2000).
+%Definition 3.3: A hierarchical optimal policy for MDP M is a hierarchical policy which
+%has the best performance among all policies consistent with the given hierarchy. In other
+%words, hierarchical optimality is a global optimum consistent with the given hierarchy. In
+%this form of optimality, the policy for each individual subtask is not necessarily optimal,
+%but the policy for the entire hierarchy is optimal. The HAMQ HRL algorithm (Parr, 1998)
+%and the SMDP Q-learning algorithm for a fixed set of options (Sutton et al., 1999; Precup,
+%2000) both converge to a hierarchically optimal policy. 
+%Definition 3.4: Recursive optimality, first introduced by Dietterich (2000), is a weaker
+%but more flexible form of optimality which only guarantees that the policy of each subtask
+%is optimal given the policies of its children. It is an important and flexible form of
+%optimality because it permits each subtask to learn a locally optimal policy while ignoring
+%the behavior of its ancestors in the hierarchy. This increases the opportunity for subtask
+%47
+%sharing and state abstraction. The MAXQ-Q HRL algorithm (Dietterich, 2000) converges
+%to a recursively optimal policy.
+
+%\begin{definition}
+    %$\mathbb{C}(H) = \{N_1, N_2, \dots, N_k\}$ is a leaf cover of MaxQ hierarchy $H$ if 
+    %we can divide H into several disjoint partitions $P = \{P_1, \dots P_m\}$ after removing all nodes in $\mathbb{C}(H)$.
+    %And the root node does not share the partition with any leaf nodes. 
+    %$\exists N_i \in \mathbb{C(H)} \suchthat N_i$ is an ancestor of $l$.
+%\end{definition}
+
+%\begin{definition}
+    %A subtask policy $\pi_i$ is optimal if $\pi_i^{hg*}(s)=\pi_p^*(s) \forall s \in S_i$,
+    %where $\pi_p^*(s)$ is the flat optimal policy.
+%\end{definition}
+
+
+%\begin{theorem}
+    %If the corresponding subtask policy $\pi_i$ is optimal $\forall N_i \in \mathbb{C}(H)$,
+    %the policy $\pi_j$ of the ancestor of $N_i$ is also optimal for all possible $\pi_j$.
+%\end{theorem}
+%Proof: $\forall N_j$: the ancestor of some node $\in \mathbb{C}(H)$, policy $\pi_j(s)$ would invoke some 
+%node $N_i$ and execute its policy $\pi_i^{hg*}(s)$. Since the policy is optimal, $\pi_j^{hg*}(s)=\pi_p^*(s)$.
+
+%\begin{center}
+%\begin{tabular}{@{}lp{6cm}@{}}
+%\hline
+%Algorithm: ExecuteHGPolicy\\
+%\hline
+%Initialize $\hat{Q_0}$ arbitrarily\\
+%$t \leftarrow 0$\\
+%Repeat (for each episode)\\
+%\ \ \ \ \ \ Initialize $s$\\
+%\ \ \ \ \ \ Choose $a$ based on $s$ using policy derived from $\hat{Q_t}$ (e.g., $\epsilon$-greedy method)\\
+%\ \ \ \ \ \ Repeat (for each step of episode):\\
+%\ \ \ \ \ \ \ \ \ \ \ \ Take action $a$, obtain reward $r$ and next state $s'$ from the environment\\
+%\ \ \ \ \ \ \ \ \ \ \ \ Choose $a'$ based on $s'$ using policy derived from $\hat{Q_t}$ (e.g., $\epsilon$-greedy method)\\
+%\ \ \ \ \ \ \ \ \ \ \ \ $\hat{q_t} \leftarrow \hat{Q_t}(s, a) + \alpha [r + \gamma \hat{Q_t}(s', a')-\hat{Q_t}(s, a)]$ \\
+%\ \ \ \ \ \ \ \ \ \ \ \ Update $\hat{Q_t}$ with $(s, a, \hat{q_t})$ by online L1 regression to produce $\hat{Q_{t+1}}$\\
+%\ \ \ \ \ \ \ \ \ \ \ \ $s \leftarrow s'$\\
+%\ \ \ \ \ \ \ \ \ \ \ \ $a \leftarrow a'$\\
+%\ \ \ \ \ \ \ \ \ \ \ \ $t \leftarrow t+1$\\
+%\ \ \ \ \ \ Until $s$ is terminal\\
+%\hline  
+%\end{tabular}
+%\end{center}
+
+%Note that Q function is:
+%\begin{align}
+    %Q^{\pi}(s, \pi(s)) &= Q^{\pi}(i, s, \pi(s)) + Q_E^{\pi}(i, s, \pi(s))\\
+    %&= V^{\pi}(\pi(s), s) + C^{\pi}(i, s, \pi(s)) + Q_E^{\pi}(i, s, \pi(s))
+%\end{align}
+
+%Andre and Russell then prove:
+%\begin{theorem}
+    %If $V^{*}, C^*, Q_E^*$ are solutions to equation \ref{eq:V}, \ref{eq:C},
+    %and \ref{eq:QE} for $\pi^*$, then $Q^* = V^{*} + C^* + Q_E^*$ is a solution
+    %to the standard Bellman equation.
+%\end{theorem}
+%\begin{theorem}
+    %Decomposed value iteration and policy iteration algorithms derived from equation
+    %\ref{eq:V}, \ref{eq:C}, and \ref{eq:QE} converge to $V^{*}, C^*, Q_E^*$, and $\pi^*$.
+%\end{theorem}
+
+%However, we need something stronger:
+%\begin{theorem}
+    %Let $\mathbb\{C\} = \{N_1, N_2, \dots\}$. If 
+    %(a) $\forall N_i \in \mathbb{C}$, the descendants of Max node $N_i$ covers all primitive Max nodes
+    %and (b) for all path from root node to leaf node must pass at least one of the nodes in $\mathbb{C}$,
+    %then the agent has hierarchical optimal policy $\pi^*$ when the policy of node $j \in \{j | j \in subtree(N_i), \forall N_i \in \mathbb{C}\}$.
+%\end{theorem}

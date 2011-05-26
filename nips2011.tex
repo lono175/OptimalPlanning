@@ -86,6 +86,7 @@ the model is arbitrarily wrong.
 %5. show the optimality
 %5.1. the offline case (not depend on Andre's proof)
 %5.2. the online case (the conjecture status, how about chaning policy (value iteration)? --> define a new mdp)
+%5.3. TD equation
 %6. The three optimality (recursive optimality is not possible(model is approximated) bottom node recursive optimal is bad (always select get passenger),hierarchical optimality is impossible. the only hope is optimal)
 %7. the respect of the hierarchy
 %8. The experiment (school bus problem)
@@ -96,6 +97,8 @@ the model is arbitrarily wrong.
 %12. why we don't use TAXI domain
 %13. say that only model-free node has the Qe term
 %14. do I need to include algorithm
+%15. DO NOT use planning envelope
+%16. We can construct Hierarchy automatically from HexQ or manually design it (make my approach applicable to any problems)
 
 %show that hierarchical optimal policy becomes optimal policy when all primitive actions
 %are available for all s in s_i
@@ -273,7 +276,8 @@ So let us proceed by changing "MaxRoot" node to the model-based one, and let "Ma
 to be the regular model-free Max node.
 The task for the $i$-th model-based Max node is to compute:
 \begin{equation}
-    Q^{\pi}(i, s, a) = V^{\pi}(a, s) + C^{\pi}(i, s, a),
+    Q^{\pi}(i, s, a) = Q_r^{\pi}(i, s, a) + Q_c^{\pi}(i, s, a).
+    \label{eq:MaxQ}
 \end{equation}
 where the completion function $C^{\pi}(i, s, a)$ is the expected cumulative reward after
 we complete (composite) action $a$ at state $s$ and before the termination of $i$-th Max node.
@@ -285,51 +289,61 @@ For example, $Q^{\pi}(MaxRoot, s, GotoExit)$ is stored in "QExit" node.
 The node queries its children node to get the value of $V^{\pi}(a, s)$.
 It can be computed by:
 \begin{equation}
-    V^{\pi}(i, s) = \left\{\begin{array}{ll}
-                    Q^{\pi}(i, s, \pi_i(s)) & \mbox{if i is composite} \\
-                    \sigma_{s'} P(s'|s, i)R(s'|s, i) & \mbox{if $x>y$} \\  
-                    \end{array} \right.
-    \label{eq:V}
+    Q_r^{\pi}(i, s, j) = 
+    \left\{\begin{array}{ll}
+        Q_r^{\pi}(j, s, \pi_j(s)) + Q_c^{\pi}(j, s, \pi_j(s))& \mbox{if j is composite} \\
+        \Sigma_{s'} P(s'|s, j)R(s'|s, j) & \mbox{if j is primitive} \\  
+    \end{array} \right.
+    \label{eq:Qr}
 \end{equation}
 In our example, to compute $Q^{\pi}(MaxRoot, s, GotoExit)$, "MaxRoot" node would query 
 "MaxExit" node to get $V^{\pi}(GotoExit, s)$.
 
-The $C^{\pi}(i, s, a)$ can be computed by the model:
+The $Q_c^{\pi}(i, s, a)$ can be computed by the model:
 \begin{equation}
-    C^{\pi}(i, s, a) = \sum_{s', N}P(s', N|s, \pi(s))\gamma^N[Q^{\pi}(i, s', \pi(s'))].
-    \label{eq:C}
+    Q_c^{\pi}(i, s, a) = \sum_{s', N} P_{s_i}^{\pi}(s', N|s, a)\gamma^N[Q_r^{\pi}(i, s', \pi_i(s')) + Q_c^{\pi}(i, s', \pi(s'))].
+    \label{eq:Qc}
+\end{equation}
+
+\begin{equation}
+    Q^{\pi}(i, s, a) = Q_r^{\pi}(i, s, a) + Q_c^{\pi}(i, s, a) + Q_e^{\pi}(i, s, a).
+    \label{eq:HordQ}
 \end{equation}
 
 Note that $P(s'|s, \pi(s))$ and $V^{\pi}(a, s)$ are provided by the child Max nodes.
-
-For model-based child Max nodes, $P(s'|s, \pi(s))$ can be computed by equation \ref{eq:multiProb}.
-
-For primitive Max nodes, it can be estimated by:
 \begin{equation}
-    \tilde{P}(s'|s, a)  = \frac{n(s', s, a)}{n(s, a)},
-    \label{eq:countP}
+    Q_e^{\pi}(i, s, a) = \sum_{s', N} P_{x_i}(s', N|s, a)\gamma^N[Q^{\pi}(k, s', \pi_k(s'))],
+    \label{eq:Qe}
 \end{equation}
-where $n(s, a)$ is the number of times primitive action $a$ executed 
-at state $s$. $n(s', s, a)$ is the number of times primitive action $a$
-transitioned the agent from state $s$ to $s'$.
+where $k$ is the index of subtask which executes $i$-th subtask.
 
-For model-free Max nodes, it can be estimated by \cite{option}:
+
+%TODO: the discount term compared the Bellman 
 \begin{equation}
-    \tilde{P}(x|s, a) = (1-\alpha)\tilde{P}(x|s, a) + \alpha [ \gamma^N \delta_{s'x}],
-    \label{eq:approxP}
+    \tilde{Q}_r(i, s, j) \leftarrow
+    \left\{\begin{array}{ll}
+    (1 - \alpha)\tilde{Q}_r(i, s, j) + \alpha R(s'| s, j)  & \mbox{if j is primitive} \\
+    \tilde{Q}_r(j, s, \pi_j(s)) + \tilde{Q}_c(j, s, \pi_j(s)) & \mbox{if j is composite} \\
+    \end{array} \right.
+    \label{eq:TdQr}
 \end{equation}
-where $s'$ is the observed state after composite action $a$ is executed at state $s$.
-$k$ is the number of steps for action $a$ to finish. 
-$x$ is the terminal state for the model-free Max node. $\delta_{s'x}=1$ if observed state $s'$
-is terminal state $x$ and 0 otherwise.
-$\alpha$ is the step-size parameter.
-The update of equation \ref{eq:approxP} is conducted after action $a$ terminates at some terminal state,
-so we know the exact value of $k$. Note that all of terminal states of the Max node shall be updated after 
-action $a$ finished.
+\begin{equation}
+    \tilde{Q}_c(i, s, j) \leftarrow
+    \left\{\begin{array}{ll}
+    (1 - \alpha)\tilde{Q}_c(i, s, j) + \alpha \gamma^N[\tilde{Q}_r(j, s', \pi_j(s')) + \tilde{Q}_c(i, s', \pi_i(s'))]  & \mbox{if $s' \in S_i$} \\
+    (1 - \alpha)\tilde{Q}_c(i, s, j) + \alpha \gamma^N[\tilde{Q}_r(j, s', \pi_j(s'))]  & \mbox{if $s' \in T_i$} \\
+    \end{array} \right.
+    \label{eq:TdQc}
+\end{equation}
 
-We can also use equation \ref{eq:countP} to estimate $\tilde{P}(x|s, a)$, but the policy of the Max node
-might change, so equation \ref{eq:approxP} is a better choice.
-
+\begin{equation}
+    \tilde{Q}_e(i, s, a) \leftarrow 
+    \left\{\begin{array}{ll}
+        (1 - \alpha)\tilde{Q}_e(i, s, a) + \alpha \gamma^N[\tilde{Q}_e(i, s', \pi_i(s'))] & \mbox{if $s' \in S_i$} \\
+        (1 - \alpha)\tilde{Q}_e(i, s, a) + \alpha \gamma^N[\tilde{Q}(k, s', \pi_k(s'))] & \mbox{if $s' \in T_i$} \\
+    \end{array} \right.
+    \label{eq:TdQe}
+\end{equation}
 %Andre and Russell \cite{OptimalQ} extends MaxQ framework to be hierarchical optimal.
 %They defined $Q_E(i, s, \pi(s))$ as:
 %\begin{equation}
@@ -386,6 +400,7 @@ model-free approaches, we can still achieve optimality even when the model is bi
     Give a hierarchical policy $\pi$ and state $s$, an execution path $E_p^\pi(a_0, s)$ 
     is a set of actions $\{a_0, a_1, \dots, a_{n-1}\}$, where $a_1=\pi_{a_0}(s), a_2=\pi_{a_1}(s), \dots$,
     and $\pi_{a_{n-1}}(s)$ is a primitive action.
+    %TODO: this definition is not good enough
 \end{definition}
 The execution path tells us the order of subtasks which will be invoked for state $s$.
 
@@ -398,7 +413,31 @@ The execution path tells us the order of subtasks which will be invoked for stat
     subtasks $N_i \in \mathbb{C}(H)$.
 \end{definition}
 
+To construct optimality guarantee, we use HORDQ for the subtasks which belong to $C(H)$.
+The 
+However, $Q(k, s', \pi_k(s')$ in equation \ref{eq:Qe} may not be a good estimation, because the model
+of the parent subtask $M_k$ may be a biased one. Only the Q value of subtask $M_i \in C(H)$ is trustworthy.
+Hence, we have to modify equation \ref{eq:Qe} as:
 
+\begin{equation}
+    Q_e^{\pi}(i, s, a) = \sum_{s', N} P_{x_i}(s', N|s, a)\gamma^N[Q^{\pi}(o_c^{\pi}(i, s'), s', a')],
+    \label{eq:OptQe}
+\end{equation}
+where $a' = \pi_j(s')$, and $j = o_c^{\pi}(i, s')$ is the next subtask in $C(H)$ which will be executed. 
+Note that the property of leaf cover ensures that we can always find such $j$ before any primitive
+action is executed (why?).
+
+
+\begin{itemize}{}
+\item $S$ is a finite set of states of the environment.
+\item $A$ is a finite of actions.
+\item The transition function $P:S \times A \times S \rightarrow [0, 1]$ defines a probability distribution over the possible next states. 
+\item The reward function $R:S \times A \rightarrow \mathbb{R}$ defines the reward after executing a certain action at a certain state.
+\end{itemize}
+%TODO: bellman equation
+\begin{theorem}
+    
+\end{theorem}
 
 %TODO: not all s are defined in Q(i, s, a) (focus on si instead of all i)
 %TODO: what if pi_c_bar may change for every step?
@@ -476,7 +515,7 @@ if some penalty is applied at some terminal states which are not part of the opt
 
 The idea of our work is to use the approximated model-based node to 
 compute the plan for the agent, and let the hierarchical optimal model-free node
-to execute the plan. If everything works as the plan, the agent would converge to the optimal
+to execute the plan. If everything works a李世光s the plan, the agent would converge to the optimal
 policy in a short time. If not (following the plan is worse than the penalty term),
 the model-free node will take control and find the optimal policy on its own.
 
@@ -488,13 +527,43 @@ we should increase the penalty term to let the agent find the optimal policy as 
 if not, a low penalty term allows the agent to find the optimal policy when the hierarchy doesn't work.
 
 
-\section{State Abstraction for model-based Max nodes}
+\section{}
 \label{se:Model}
-The idea behind model-based approach is to use the sample data to build the model of the environment
-and conduct the planning from the model.
-The advantage of model-based approaches is that they make more efficient use of the sample data, thus 
-it take fewer time to train a model-based RL agent.
 
+Based on the result of previous section, we can safely use approximated model-based methods 
+to learn the Q-function of subtasks which do not belong to $C(H)$ without worrying
+that it will violate the optimality condition.
+
+Here we follow MAXQ approach and decompose Q-function as a combination of $Q_r$ and $Q_c$ terms.
+
+%Qr here
+If 
+
+%Qc here 
+$Q_c^{\pi}(i, s, a)$ can be computed by solving equation \ref{eq:Qc}.
+If action $a$ is a model-free subtask ($a \in C(H)$), 
+we can estimated 
+\begin{equation}
+    \tilde{P}(x|s, a) = (1-\alpha)\tilde{P}(x|s, a) + \alpha [ \gamma^N \delta_{s'x}],
+    \label{eq:approxP}
+\end{equation}
+where $s'$ is the observed state after composite action $a$ is executed at state $s$.
+$k$ is the number of steps for action $a$ to finish. 
+$x$ is the terminal state for the model-free Max node. $\delta_{s'x}=1$ if observed state $s'$
+is terminal state $x$ and 0 otherwise.
+
+For model-based child Max nodes, $P(s'|s, \pi(s))$ can be computed by equation \ref{eq:multiProb}.
+
+$\alpha$ is the step-size parameter.
+For model-free Max nodes, it can be estimated by \cite{option}:
+The update of equation \ref{eq:approxP} is conducted after action $a$ terminates at some terminal state,
+so we know the exact value of $k$. Note that all of terminal states of the Max node shall be updated after 
+action $a$ finished.
+
+We can also use equation \ref{eq:countP} to estimate $\tilde{P}(x|s, a)$, but the policy of the Max node
+might change, so equation \ref{eq:approxP} is a better choice.
+We follow k
+We use  We need to learn 
 The disadvantage is that it needs to compute Q value of all state-action pairs in the current 
 planning envelope by Bellman equation (equ. \ref{eq:Q}) until convergence.
 Since the number of state-action pairs grows exponentially with the number of features,
@@ -548,6 +617,7 @@ case, the policy can go very wrong. It makes recursive optimality impossible, si
 the approach may not converge to the optimal policy within the subtask. Likewise,
 a suboptimal policy for a subtask may also make hierarchical optimality impossible.
 Here we are looking for a certain hierarchy  
+
 \section{Hierarchically optimal recursive Q-learning (HORDQ)}
 1. linear approximation (good for model-free approach)
 2. the update rule (only on other model-free nodes)
@@ -555,21 +625,8 @@ Here we are looking for a certain hierarchy
 
 \section{Experiment}
 %TODO: Say how do we update the model (just for three iteration) with Bellman equation
+%TODO: say we use MaxQ for model based approach
 
-All artwork must be neat, clean, and legible. Lines should be dark
-enough for purposes of reproduction; art work should not be
-hand-drawn. The figure number and caption always appear after the
-figure. Place one line space before the figure caption, and one line
-space after the figure. The figure caption is lower case (except for
-first word and proper nouns); figures are numbered consecutively.
-
-Make sure the figure caption does not get separated from the figure.
-Leave sufficient space to avoid splitting the figure and figure caption.
-
-You may use color figures. 
-However, it is best for the
-figure captions and the paper body to make sense if the paper is printed
-either in black/white or in color.
 \begin{figure}[h]
 %\begin{center}
  \begin{minipage}[b]{0.5\linewidth}
@@ -584,16 +641,93 @@ either in black/white or in color.
 \begin{minipage}[b]{0.5\linewidth} \centering (b) \end{minipage}
 
 %\end{center}
-\caption{The location of the discriminative patches with positive weight of each classifier for the Weizmann dataset. (a) bend, (b) jack,
-(c) jump, (d) pjump, (e) run, (f) side, (g) skip, (h) walk, (i) wave1 and (j) wave2}
+\caption{(a) The School Bus Domain (b) A task graph for the School Bus problem.}
 \label{fig:bus}
 \end{figure}
 
-\subsection{Tables}
+We test our approach in the school bus problem. School bus starts at school $S$. Its task 
+is to pickup all of three passengers marked as $P$ and return to the school(Figure \ref{fig:bus}a).
+The episode ends when it finishes the task. There are no reward for finishing the task.
+The passengers can be picked up in any order. The bus picks up the passenger automatically when it moves into
+the location of passenger.
 
-All tables must be centered, neat, clean and legible. Do not use hand-drawn
-tables. The table number and title always appear before the table. See
-Table~\ref{sample-table}.
+The bus can move North, South, East, or West. There is a reward of -1 for each action.
+There are two locations which may be under road construction. They are marked as 
+$A$ and $B$. If the bus pass any construction site, it will get damaged with probability 1 and has probability
+0.25 to break down for each step. There is a reward of -50 if the bus breaks down and the episode ends immediately. 
+
+A state can be described by 8-tuple $(x, y, h, p_1, p_2, p_3, a, b)$, where $(x, y)$ is the location of 
+bus, $h$ shows if the bus is damaged, $p_i$ indicates if the corresponding passenger has been picked up or not,
+and $a$ and $b$ indicate the status of the construction sites.
+%TODO: randomness in the game
+
+
+
+%TODO: total leaf cover always exist
+There are 4 primitive actions that move the bus one step North, South, East, or West. 
+The world is divided by 6 areas. Composite action $Move(t)$ moves the bus to area $t$. 
+$Move(t)$ can only be invoked if $t$ is the adjacent area.
+%TODO: pesudo reward and terminates
+Our hierarchy design specifies that
+
+The task graph is shown in Figure \ref{fig:bus}(b). 
+Since the six composite actions cover all primitive actions, they are a total leaf cover.
+We used HORDQ in their corresponding subtasks to guarantee the convergence to the optimal
+policy. $Root$ subtask adopted our approximated model-based method. The planning variables include 
+the location of bus and the status of passengers. The environment variables are the 
+damage status of bus and the status of road. 
+
+Our model learns when the bus is damaged, it will receive a large penalty.  
+Since the damage status is assumed static during the planning process, 
+it fails to learn that the bus will get damaged if it passes through
+location $A$ and $B$. Our model is certainly biased in this case, and
+it cannot learn the optimal policy. One solution is to include the damage 
+status as one of the planning variables. However, the objective of 
+the experiment is to show that the optimal policy can be achieved
+with the biased model if we combine it with HORDQ. 
+
+Figure ??? shows the result with different pseudo rewards. 
+With pseudo reward +60, the agent learned a suboptimal policy because
+the pseudo reward is large enough to make $Move(t)$ subtask ignore 
+the penalty of breakdown. As a result, The subtask followed 
+the instruction of its parent strictly.
+
+On other hand, if we do not impose any pseudo reward, 
+the optimal policy can be learned, but the convergence rate is
+slower than flat SARSA learning. Since the subtask has no
+incentive to follow the instruction from the hierarchy, 
+the learning process is similar to flat SARSA learning 
+except it has six different Q-functions to learn (one for each subtask) instead of one.
+Therefore it takes longer to learn the optimal policy. 
+
+With appropriate pseudo reward, we can get a near-optimal policy
+while the convergence rate is faster than flat SARSA learning.
+Note that the pseudo reward of +5 is enough to make $Move(t)$ subtask follow 
+the order of $Root$ in most of the times, but it is not large enough for $Move(t)$ to ignore
+the breakdown penalty. When $Root$ wants to move the bus from area 
+3 to area 4 and the road at location $A$ is under construction, $Move(4)$ subtask
+will learn it is a bad decision with HORDQ.
+Instead of moving to area 4, $Move(4)$ may move to area 1 or 5 to avoid
+the breakdown penalty. In turn, $Root$ learns $Move(4)$ can not be done in 
+such scenario, thus it will seek an alternate plan if the same scenario
+is encountered.
+
+In order to show the convergence 
+The worst case of 
+
+The result shows that we still need an approximately good model 
+to enjoy the increase of convergence rate. However, 
+it will converge to the optimal policy regardless of the quality of model.
+
+On the contrary, the combination of MAXQ and a poor approximated model has
+a performance similar to random policy.
+
+%TODO: add random agent experiment
+%TODO: if I set the pseudo reward to zero, will the whole stuff breaks down again?
+
+
+
+
 
 %Place one line space before the table title, one line space after the table
 %title, and one line space after the table. The table title must be lower caseggg
@@ -616,316 +750,3 @@ Table~\ref{sample-table}.
 \end{document}
 
 \endinput
-
-Reinforcement learning methods can broadly be divided into two classes, model-based and model-free. Consider the problem illustrated in the
-figure, of deciding which route to take on the way home from work on Friday evening. We can abstract this task as having states (in this case,
-locations, notably of junctions), actions (e.g. going straight on or turning left or right at every intersection), probabilities of transitioning from one
-state to another when a certain action is taken (these transitions are not necessarily deterministic, e.g. due to road works and bypasses), and
-positive or negative outcomes (i.e. rewards or costs) at each transition from scenery, traffic jams, fuel consumed, etc. (which are again
-probabilistic).
-Model-based computation, illustrated in the left ‘thought bubble’, is akin to searching a mental map (a forward model of the task) that has been
-learned based on previous experience. This forward model comprises knowledge of the characteristics of the task, notably, the probabilities of
-different transitions and different immediate outcomes. Model-based action selection proceeds by searching the mental map to work out the longrun
-value of each action at the current state in terms of the expected reward of the whole route home, and chooses the action that has the highest
-value.
-Model-free action selection, by contrast, is based on learning these long-run values of actions (or a preference order between actions) without
-either building or searching through a model. RL provides a number of methods for doing this, in which learning is based on momentary
-inconsistencies between successive estimates of these values along sample trajectories. These values, sometimes called cached values because
-of the way they store experience, encompass all future probabilistic transitions and rewards in a single scalar number that denotes the overall future
-worth of an action (or its attractiveness compared with other actions). For instance, as illustrated in the right ‘thought bubble’, experience may have
-taught the commuter that on Friday evenings the best action at this intersection is to continue straight and avoid the freeway.
-Model-free methods are clearly easier to use in terms of online decision-making; however, much trial-and-error experience is required to make the
-values be good estimates of future consequences. Moreover, the cached values are inherently inflexible: although hearing about an unexpected
-traffic jam on the radio can immediately affect action selection that is based on a forward model, the effect of the traffic jam on a cached propensity
-such as ‘avoid the freeway on Friday evening’ cannot be calculated without further trial-and-error learning on days in which this traffic jam occurs.
-Changes in the goal of behavior, as when moving to a new house, also expose the differences between the methods: whereas model-based
-decision making can be immediately sensitive to such a goal-shift, cached values are again slow to change appropriately. Indeed, many of us have
-experienced this directly in daily life after moving house. We clearly know the location of our new home, and can make our way to it by
-concentrating on the new route; but we can occasionally take an habitual wrong turn toward the old address if our minds wander. Such
-introspection, and a wealth of rigorous behavioral studies (see [15], for a review) suggests that the brain employs both model-free and model-based
-decision-making strategies in parallel, with each dominating in different circumstances [14]. Indeed, somewhat different neural substrates underlie
-each one [17].
-
-
-We do not need to model all transition of all variables in the MDP.
-We note that, however, for a stochastic environment, the size of planning envelope grows exponentially with the number of planning
-steps. Predicting the next state is not enough since we may encounter different next states with the same state and action choice.
-If we predict more than one states for each step, we will have a planning envelope which grows exponentially with the number of planning
-steps. We need a way to restrict the size of planning envelope. Our idea is to separate the variables to planning variables 
-and environment variables. We compute all of the possible values of planning variables, while assuming 
-the environment variables to be static throughout the planning process.  
-It seems that we over-simplifies the problem. Nevertheless, there are many applications
-in which we can find some small set of variables which are more important than others. Take 
-mobile robot navigation problem for example, 
-what we concerned is the locaiton of the agent, 
-for other slowing objects in surronding environment may not be a concerned 
-Our contribution
-
-
-There has been little previous work addressing planning
-with linear function approximation in an online setting.
-
-Our model seems over-simplified, however, there are some variables which are more 
-infunential than others in many problems, it is reasonable to spend more resources
-to model these variables. Take path for example.
-Besides, a inevitable problem is the size of planning envelope. It 
-We enumerate all possible states.
-we separate the varible into planning variable and environment variables.
-We only model the transition for planning varialbe and assuming environment variables are
-static throughout the planning process.
-One motivation application is the navigation problem. In navigation task,
-what we concerned is the locaiton of the agent, 
-for other slowing objects in surronding environment may not be a concerned 
-since they do not have significant impact on our plan
-Thus we can assign the location
-as the planning variable and keep the rest of the information as environment variable.
-With the approximation, we can significatly reduce the size of the planning envelope.
-We don't have the trouble 
-A separate decision tree is built to predict each
-next state feature as well as the reward. Their algorithm
-attempts to predict the absolute transition function, while
-our approach is to predict the relative effects of transitions,
-which may be easier in many domains. Degris et al.’s algo-
-rithm calculates an ǫ-greedy policy through value iteration
-based on the model provided by the decision trees.
-
-
-
-
-Instead, we need a approximated model
-
-There has been little previous work addressing planning
-with linear function approximation in an online setting.
-Paduraru (2007) treated this case, focusing mainly on sampling
-stochastic models of a cascading linear form, but
-also briefly discussing deterministic linear models. Degris,
-Sigaud and Wuillemin (2006) developed a version of Dyna
-based on approximations in the form of dynamic Bayes networks
-and decision trees. Their system, SPITI, included
-online learning and planning based on an incremental version
-of structured value iteration (Boutilier, Dearden &
-Goldszmidt 2000).
-
-
-
-
-Reinforcement learning (RL) studies the problem of
-finding effective solutions to sequential decision mak-
-ing problems (Sutton & Barto, 1998). For many
-agent-based applications, it is critical that an RL al-
-gorithm be very sample efficient: that it takes very
-few actions to learn an effective policy. We focus on
-sample efficiency as the key evaluation criterion for
-RL algorithms because in many agent-based applica-
-tions, acquiring experiences can be very expensive and
-time-consuming. Two of the main approaches towards
-this goal are to incorporate generalization (function
-approximation) into model-free methods and to de-
-velop model-based algorithms. Model-based methods
-achieve high sample efficiency by learning a model of
-the domain and simulating experiences in their model,
-thus saving precious samples in the real world.
-This paper is motivated primarily by the observation
-that the world is too large to explore exhaustively.
-Consider, for example, the act of identifying your fa-
-vorite restaurant. One possible strategy is to visit the
-restaurants in order of their distances from your house,
-visiting closest ones first. In most American cities, do-
-ing so would likely lead you to visit several pizza par-
-lors, fast food joints, and coffee shops before getting to
-many gourmet establishments. Nonetheless, provided
-that you have time to try every restaurant, eventually
-you will find your favorite one.
-
-The first of these advances is model-based RL. Early work in this direction
-demonstrated that summarizing an agent’s experience into a model facilitates
-the efficient reuse of data [1]. Later work investigated how the uncertainty in
-the model can guide exploration, yielding the first (probabilistic) finite bounds
-on the amount of data required to learn near-optimal behaviors [2,3]. Still, these
-guarantees require that the agent exhaustively explore every state. Particularly
-in large domains, this exploration can be impractical.
-Third, hierarchical decomposition is perhaps the most intuitively appealing
-extension of the standard approach, since we would like to imbue our learning
-algorithms with the same awareness of structure that seems to allow us to
-cope with the extraordinary complexity of the real world. Hierarchical RL has
-been explored via work on temporal abstraction, in which temporally extended
-abstract actions allow agents to reason above the level of primitive actions [6].
-However, we still do not have a complete understanding of how hierarchy benefits
-learning and therefore how to design or discover hierarchies.
-
-Second, function approximation allows RL to cope with large or even infinite
-state spaces by introducing generalization. It allows an algorithm to approximate
-the long-term value of every action in every state using only a relatively
-small set of parameters. Many state-of-the-art approaches employ model-free
-algorithms and representations that attempt to estimate these values directly
-from data [4,5], but they often st
-
-Reinforcement learning studies the problem
-of solving sequential decision making prob-
-lems. Model-based methods learn an effec-
-tive policy in few actions by learning a model
-of the domain and simulating experience in
-their models. Typical model-based methods
-must visit each state at least once, which
-can be infeasible in large domains. To over-
-
-Each interaction provides additional
-information that can be used to learn a better model of the
-world’s dynamics, and because this change could result in a
-different action being best (given the model), the planning
-process should be repeated to take this into account. However,
-planning is inherently a complex process; on large
-problems it not possible to repeat it on every time step without
-greatly slowing down the response time of the system.
-
-\cite{approxModel}
-There has been little previous work addressing planning
-with linear function approximation in an online setting.
-Paduraru (2007) treated this case, focusing mainly on sampling
-stochastic models of a cascading linear form, but
-also briefly discussing deterministic linear models. Degris,
-Sigaud and Wuillemin (2006) developed a version of Dyna
-based on approximations in the form of dynamic Bayes networks
-and decision trees. Their system, SPITI, included
-online learning and planning based on an incremental version
-of structured value iteration (Boutilier, Dearden &
-Goldszmidt 2000).
-
-The factored Markov Decision Process (FMDP) is a formalism for sequential decision problems
-that allows for the explicit representation of environmental structure not possible in the traditional
-Markov Decision Process (MDP). Much work in the reinforcement learning literature has focused
-on algorithms that exploit this structure to more efficiently learn or compute optimal solutions to
-such problems [1, 2]. In some cases this has allowed for the application of reinforcement learning
-techniques to environments much larger than could otherwise be handled feasibly by methods that
-do not exploit structure. These approaches generally make use of structure by ignoring regions or
-entire dimensions of the state space that are irrelevant to solving a particular task. Many of these
-approaches make use of factored transition and reward models to represent these independencies.
-The majority of work with FMDPs has focused on discrete environments; i.e., those with a finite
-number of states and actions. Some of these approaches have presented methods for learning a
-factored transition model online from experience, and for using that model to compute optimal
-policies [3, 4, 5].
-
-Each interaction provides additional
-information that can be used to learn a better model of the
-world’s dynamics, and because this change could result in a
-different action being best (given the model), the planning
-process should be repeated to take this into account. However,
-planning is inherently a complex process; on large
-problems it not possible to repeat it on every time step without
-greatly slowing down the response time of the system.
-
-
-Reinforcement learning studies the problem
-of solving sequential decision making prob-
-lems. Model-based methods learn an effec-
-tive policy in few actions by learning a model
-of the domain and simulating experience in
-their models. Typical model-based methods
-must visit each state at least once, which
-can be infeasible in large domains. To over-
-come this problem, the model learning algo-
-rithm needs to generalize knowledge to un-
-seen states and provide information about
-the states in which it needs more experi-
-ence. In this paper, we use existing super-
-vised learning techniques to learn the model
-of the domain. We empirically compare their
-effectiveness at generalizing knowledge across
-states on three different domains. Our results
-indicate that tree-based models perform the
-best after training on a small number of tran-
-sitions, while support vector machines per-
-form the best after a large number of transi-
-tions.
-
-%3.3 Local versus Global Optimality
-%Using hierarchy reduces the size of the space that must be searched to find a good policy.
-%However, a hierarchy constrains the space of possible policies so that it may not be
-%possible to represent the optimal policy or its value function, and hence make it impossible
-%to learn the optimal policy. If we cannot learn the optimal policy, the next best target
-%would be to learn the best policy that is consistent with the given hierarchy. Two notions of
-%optimality have been explored in the previous work on hierarchical reinforcement learning,
-%hierarchical optimality and recursive optimality (Dietterich, 2000).
-%Definition 3.3: A hierarchical optimal policy for MDP M is a hierarchical policy which
-%has the best performance among all policies consistent with the given hierarchy. In other
-%words, hierarchical optimality is a global optimum consistent with the given hierarchy. In
-%this form of optimality, the policy for each individual subtask is not necessarily optimal,
-%but the policy for the entire hierarchy is optimal. The HAMQ HRL algorithm (Parr, 1998)
-%and the SMDP Q-learning algorithm for a fixed set of options (Sutton et al., 1999; Precup,
-%2000) both converge to a hierarchically optimal policy. 
-%Definition 3.4: Recursive optimality, first introduced by Dietterich (2000), is a weaker
-%but more flexible form of optimality which only guarantees that the policy of each subtask
-%is optimal given the policies of its children. It is an important and flexible form of
-%optimality because it permits each subtask to learn a locally optimal policy while ignoring
-%the behavior of its ancestors in the hierarchy. This increases the opportunity for subtask
-%47
-%sharing and state abstraction. The MAXQ-Q HRL algorithm (Dietterich, 2000) converges
-%to a recursively optimal policy.
-
-%\begin{definition}
-    %$\mathbb{C}(H) = \{N_1, N_2, \dots, N_k\}$ is a leaf cover of MaxQ hierarchy $H$ if 
-    %we can divide H into several disjoint partitions $P = \{P_1, \dots P_m\}$ after removing all nodes in $\mathbb{C}(H)$.
-    %And the root node does not share the partition with any leaf nodes. 
-    %$\exists N_i \in \mathbb{C(H)} \suchthat N_i$ is an ancestor of $l$.
-%\end{definition}
-
-%\begin{definition}
-    %A subtask policy $\pi_i$ is optimal if $\pi_i^{hg*}(s)=\pi_p^*(s) \forall s \in S_i$,
-    %where $\pi_p^*(s)$ is the flat optimal policy.
-%\end{definition}
-
-
-%\begin{theorem}
-    %If the corresponding subtask policy $\pi_i$ is optimal $\forall N_i \in \mathbb{C}(H)$,
-    %the policy $\pi_j$ of the ancestor of $N_i$ is also optimal for all possible $\pi_j$.
-%\end{theorem}
-%Proof: $\forall N_j$: the ancestor of some node $\in \mathbb{C}(H)$, policy $\pi_j(s)$ would invoke some 
-%node $N_i$ and execute its policy $\pi_i^{hg*}(s)$. Since the policy is optimal, $\pi_j^{hg*}(s)=\pi_p^*(s)$.
-
-%\begin{center}
-%\begin{tabular}{@{}lp{6cm}@{}}
-%\hline
-%Algorithm: ExecuteHGPolicy\\
-%\hline
-%Initialize $\hat{Q_0}$ arbitrarily\\
-%$t \leftarrow 0$\\
-%Repeat (for each episode)\\
-%\ \ \ \ \ \ Initialize $s$\\
-%\ \ \ \ \ \ Choose $a$ based on $s$ using policy derived from $\hat{Q_t}$ (e.g., $\epsilon$-greedy method)\\
-%\ \ \ \ \ \ Repeat (for each step of episode):\\
-%\ \ \ \ \ \ \ \ \ \ \ \ Take action $a$, obtain reward $r$ and next state $s'$ from the environment\\
-%\ \ \ \ \ \ \ \ \ \ \ \ Choose $a'$ based on $s'$ using policy derived from $\hat{Q_t}$ (e.g., $\epsilon$-greedy method)\\
-%\ \ \ \ \ \ \ \ \ \ \ \ $\hat{q_t} \leftarrow \hat{Q_t}(s, a) + \alpha [r + \gamma \hat{Q_t}(s', a')-\hat{Q_t}(s, a)]$ \\
-%\ \ \ \ \ \ \ \ \ \ \ \ Update $\hat{Q_t}$ with $(s, a, \hat{q_t})$ by online L1 regression to produce $\hat{Q_{t+1}}$\\
-%\ \ \ \ \ \ \ \ \ \ \ \ $s \leftarrow s'$\\
-%\ \ \ \ \ \ \ \ \ \ \ \ $a \leftarrow a'$\\
-%\ \ \ \ \ \ \ \ \ \ \ \ $t \leftarrow t+1$\\
-%\ \ \ \ \ \ Until $s$ is terminal\\
-%\hline  
-%\end{tabular}
-%\end{center}
-
-%Note that Q function is:
-%\begin{align}
-    %Q^{\pi}(s, \pi(s)) &= Q^{\pi}(i, s, \pi(s)) + Q_E^{\pi}(i, s, \pi(s))\\
-    %&= V^{\pi}(\pi(s), s) + C^{\pi}(i, s, \pi(s)) + Q_E^{\pi}(i, s, \pi(s))
-%\end{align}
-
-%Andre and Russell then prove:
-%\begin{theorem}
-    %If $V^{*}, C^*, Q_E^*$ are solutions to equation \ref{eq:V}, \ref{eq:C},
-    %and \ref{eq:QE} for $\pi^*$, then $Q^* = V^{*} + C^* + Q_E^*$ is a solution
-    %to the standard Bellman equation.
-%\end{theorem}
-%\begin{theorem}
-    %Decomposed value iteration and policy iteration algorithms derived from equation
-    %\ref{eq:V}, \ref{eq:C}, and \ref{eq:QE} converge to $V^{*}, C^*, Q_E^*$, and $\pi^*$.
-%\end{theorem}
-
-%However, we need something stronger:
-%\begin{theorem}
-    %Let $\mathbb\{C\} = \{N_1, N_2, \dots\}$. If 
-    %(a) $\forall N_i \in \mathbb{C}$, the descendants of Max node $N_i$ covers all primitive Max nodes
-    %and (b) for all path from root node to leaf node must pass at least one of the nodes in $\mathbb{C}$,
-    %then the agent has hierarchical optimal policy $\pi^*$ when the policy of node $j \in \{j | j \in subtree(N_i), \forall N_i \in \mathbb{C}\}$.
-%\end{theorem}
