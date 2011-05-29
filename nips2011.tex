@@ -109,6 +109,8 @@ the model is arbitrarily wrong.
 %The intuition is that the update rule for [] is actually the standard flat SARSA algorithm except that different subtasks have their own table.
 %The intuition on QE (make subagent to rebel the hierarchy)
 %Show that after modification, the hierarchical optimality can be achieved and it is equal to optimality
+%TODO: apply PnP
+%TODO: rephrase for MAXQ
 
 \section{Introduction}
 
@@ -307,7 +309,7 @@ the convergence rate, the time to learn the optimal policy might still decrease.
 \begin{definition}
     $C(H) = \{M_1, M_2, \dots, M_k\}$ is a leaf cover of hierarchy $H$ 
     if there are no subtask $M_i \notin C(H)$ which has access to a primitive action.
-    Furthermore, $TC(H)$ is a total leaf cover if all primitive actions are available for every 
+    Furthermore, $TC(H)$ is a total leaf cover if all primitive actions are direct or indirect (through child subtasks) accessible for every 
     subtasks $M_i \in TC(H)$.
 \end{definition}
 
@@ -358,7 +360,7 @@ The $Q_c^{\pi}(i, s, a)$ can be computed:
 %Note that $P(s'|s, \pi(s))$ and $V^{\pi}(a, s)$ are provided by the child Max nodes.
 And $Q_e^{\pi}$:
 \begin{equation}
-    Q_e^{\pi}(i, s, a) = \sum_{s', N} P_{x_i}(s', N|s, a)\gamma^N[Q^{\pi}(k, s', \pi_k(s'))],
+    Q_e^{\pi}(i, s, a) = \sum_{s', N} P_{x_i}^{\pi}(s', N|s, a)\gamma^N[Q^{\pi}(k, s', \pi_k(s'))],
     \label{eq:Qe}
 \end{equation}
 where $k$ is the index of subtask which executes subtask $M_i$.
@@ -378,11 +380,12 @@ action is executed. %TODO: (why?).
 
 
 \begin{theorem}
-    If $TC(H)$ is a total leaf cover of hierarchy $H$, and $Q^{\pi}$, $Q_r^{\pi}$, $Q_c^{\pi}$ and $Q_e^{\pi}$ satisfy equation
-    %TODO:
-    10, 
-    \ref{eq:Qr}, \ref{eq:Qc}, and \ref{eq:OptQe} separately, $Q^{\pi}$ satisfies Bellman equation:
-    $Q^{\pi}(i, s, a) = \sum_{i', s', N}P(i', s', N|s, a)[R(s'|s, a) + \gamma^N Q^{\pi}(i', s', \pi_{i'}(s'))]$
+    $\forall \pi_{C}: A_C \times S \rightarrow A_C$,   
+    if $C(H)$ is a leaf cover of hierarchy $H$, $Q^{\pi} = Q_r^{\pi} + Q_c^{\pi} + Q_e^{\pi}$ satisfies 
+    Bellman equation:
+    $Q^{\pi}(i, s, j) = \sum_{s'}P(s'|s, j)[R(s'|s, j) + \gamma Q^{\pi}(i', s', \pi_{i'}(s'))]$,
+    if $j: primitive$; $Q^{\pi}(i, s, j) = Q^{\pi}(j, s', \pi_{j}(s'))$, if $j:composite$, $\forall M_i \in C(H)$.
+    \label{thm:Bell}
 \end{theorem}
 
 %TODO: not all s are defined in Q(i, s, a) (focus on si instead of all i)
@@ -397,60 +400,96 @@ action is executed. %TODO: (why?).
 %TODO: show that I can convert any MDP problem to hierarchy one, thus we can always combine approximated model-based approach with HORDQ.
 
 \begin{theorem}
-    If $TC(H)$ is a total leaf cover, we have $Q^*(i, s, a) = Q^*(s, a), \forall i \in \mathbb{C}(H)$
+    %$\forall \pi_{N}: A_{TC} \times S \rightarrow A_{TC}$,   
+    %TODO: state that the proof does not require
+    if $TC(H)$ is a total leaf cover of hierarchy $H$, we have $Q^*(i, s, a) = Q^*(s, a), \forall s \in S_i, a \in A_p, i \in TC(H)$
+    \label{thm:opt}
 \end{theorem}
-\textbf{Proof:} Let $\pi_{\bar{\mathbb{C}}}: \mathbb{C}(H) \times S \rightarrow \mathbb{C}(H)$ be the policy to invoke
-the next subtask $j = \pi_{\bar{\mathbb{C}}}(i, s)$ which belongs to $\mathbb{C}(H)$. It is determined
-by the policy of subtasks which do not belong to $\mathbb{C}(H)$ and terminate predicate $T_i$. Follow Bellman's equation, we have:
-\begin{align}
-    Q^{\pi}(i, s, a) &= \sum_{s'} P^{\pi}(\pi_{\bar{\mathbb{C}}}(i, s'), s'|i, s, a) [R(s', s, a) + \gamma Q^{\pi}(\pi_{\bar{\mathbb{C}}}(i, s'), s', \pi_i(s'))]\\
-    &=\sum_{s'}P^{\pi}(\pi_{\bar{\mathbb{C}}}(i, s')| i, s, a, s') P(s' | i, s, a)  [R(s', s, a) + \gamma Q^{\pi}(\pi_{\bar{\mathbb{C}}}(i, s'), s', \pi_i(s'))]\\
-    &\mbox{since $\pi_{\bar{\mathbb{C}}}$ is a deterministic policy}\\
-    &=\sum_{s'} P(s' | s, a) [R(s', s, a) + \gamma Q^{\pi}(\pi_{\bar{\mathbb{C}}}(i, s'), s', \pi_i(s'))]
-    \label{eq:MaxIrr}
-\end{align}
+\textbf{Proof:} 
+    $\forall \pi_f: S \rightarrow A_p$ a policy for MDP $M$, we can construct a hierarchical policy $\pi$, such that
+    $\pi_i(s) = \pi_f(s) = a$, if $a \in A_p$, $\forall i \in TC(H)$ (if $a$ is not directly accessible by $M_i$, we can
+    let $\pi_i(s)$ be one of its composite actions).
+    From Theorem \ref{thm:Bell}, we know: 
+    \begin{equation}
+        Q^{\pi}(i, s, j) = \sum_{s'}P(s'|s, j)[R(s'|s, j) + \gamma Q^{\pi}(i', s', \pi_{i'}(s'))].
+    \end{equation}
+    If $j_2= \pi_{i'}(s')$ is a composite action, we have $Q^{\pi}(i', s', j_2) = Q^{\pi}(j_2, s', \pi_{j_2}(s'))$. 
+    We can keep applying the substitution until $\pi_{j_k}(s') \in A_p$, for some $k$. Since there are no
+    indirect or direct recursive calls allowed in the hierarchy, the substitution can be done in finite 
+    steps. Now we have:
+    \begin{equation}
+        Q^{\pi}(i, s, j) = \sum_{s'}P(s'|s, j)[R(s'|s, j) + \gamma Q^{\pi}(j_k, s', \pi_{j_k}(s'))],
+        \label{eq:MaxIrr}
+    \end{equation}
+    where $j_k \in TC(H)$ because $TC(H)$ is a leaf cover.
+    By the construction of $\pi$, we have $\pi_{j_k}(s') = \pi_f(s')$.
+    
+    Compare to the Bellman equation of the flat MDP:
+    \begin{equation}
+        Q^{\pi_f}(s, j) = \sum_{s'}P(s'|s, j)[R(s'| s, j) + \gamma Q^{\pi_f}(s', \pi_f(s'))].
+        \label{eq:bellman}
+    \end{equation}
 
-Compare to the Bellman equation of the flat MDP:
-\begin{equation}
-    Q^{\pi_f}(s, a) = \sum_{s'}P(s'|s, a)[R(s', s, a) + \gamma Q^{\pi_f}(s', \pi_f(s'))].
-    \label{eq:bellman}
-\end{equation}
+    The equations \ref{eq:MaxIrr} and \ref{eq:bellman} are identical except for the Q values.
+    Due to the uniqueness of Bellman equation, we have $Q^{\pi_f}(s, a) = Q^{\pi}(i, s, a), \forall s \in S_i, a \in A_p, i \in TC(H)$. 
+    If $\pi_f(s) = \pi^*_f(s)$, $Q^*(s, a)$ is a solution to equation \ref{eq:MaxIrr}. So we have $Q^*(i, s, a) \geq Q^*(s, a)$.
+    Since a hierarchical policy cannot be better an optimal policy, we have $Q^*(s, a) \geq Q^*(i, s, a)$.
+    Thus we have $Q^*(i, s, a) = Q^*(s, a)$. \textbf{Q.E.D.}
 
-The equations \ref{eq:MaxIrr} and \ref{eq:bellman} are identical except for the Q values.
-Due to uniqueness of Bellman equation, if $\pi_i(s) = \pi_f(s), \forall s$, we will have $Q^{\pi_f}(s, a) = Q^{\pi_f}(i, s, a)$. 
-If $\pi_i(s) = \pi^*_f(s)$, $Q^*(s, a)$ is a solution and also an optimal solution (why?) of equation \ref{eq:MaxIrr}.
-Thus we have $Q^*(i, s, a) = Q^*(s, a)$. \textbf{Q.E.D.}
+Note that the above proof does not pose any constraints on $\pi_i \notin TC(H)$, we have the optimality
+guarantee if we adopt any learning algorithms for subtask $M_i \notin TC(H)$.
 
-The previous equations assume we have complete knowledge about of problem and can compute
-the Q function with dynamic programming. If we do not have the knowledge, we can
-use temporal difference learning instead:
+We can compute optimal policy with either policy iteration or value iteration algorithms. The arguments of
+theorem 11 and 13 of \cite{HORDQ} hold in our case. We do not repeat the same argument here.
+ 
+%Because we do not usually have the complete knowledge of reward function and transition function,
+%it is more desirable if we can estimate the $Q$ value in an online fashion.
+The previous equations assume we have complete knowledge about the problem and can compute
+the Q function with dynamic programming. If not, we can estimate the Q function directly with
+model-free temporal difference learning method:
+%use temporal difference learning instead:
 %TODO: the discount term compared the Bellman 
+%TODO: the value iteration here!!!
 \begin{equation}
     \tilde{Q}_r(i, s, j) \leftarrow
-    \left\{\begin{array}{ll}
-    (1 - \alpha)\tilde{Q}_r(i, s, j) + \alpha R(s'| s, j)  & \mbox{if j is primitive} \\
-    \tilde{Q}_r(j, s, \pi_j(s)) + \tilde{Q}_c(j, s, \pi_j(s)) & \mbox{if j is composite} \\
-    \end{array} \right.
+    %\left\{\begin{array}{ll}
+    (1 - \alpha)\tilde{Q}_r(i, s, j) + \alpha R(s'| s, j)   \mbox{if j is primitive} \\
+\end{equation}
+\begin{equation}
+    \tilde{Q}_r(i, s, j) \leftarrow
+    \tilde{Q}_r(j, s, \pi_j(s)) + \tilde{Q}_c(j, s, \pi_j(s))  \mbox{if j is composite} \\
+    %\end{array} \right.
     \label{eq:TdQr}
 \end{equation}
 \begin{equation}
     \tilde{Q}_c(i, s, j) \leftarrow
-    \left\{\begin{array}{ll}
-    (1 - \alpha)\tilde{Q}_c(i, s, j) + \alpha \gamma^N[\tilde{Q}_r(j, s', \pi_j(s')) + \tilde{Q}_c(i, s', \pi_i(s'))]  & \mbox{if $s' \in S_i$} \\
-    (1 - \alpha)\tilde{Q}_c(i, s, j) + \alpha \gamma^N[\tilde{Q}_r(j, s', \pi_j(s'))]  & \mbox{if $s' \in T_i$} \\
-    \end{array} \right.
+    %\left\{\begin{array}{ll}
+    (1 - \alpha)\tilde{Q}_c(i, s, j) + \alpha \gamma^N[\tilde{Q}_r(j, s', \pi_j(s')) + \tilde{Q}_c(i, s', \pi_i(s'))]   \mbox{if $s' \in S_i$} \\
+\end{equation}
+\begin{equation}
+    \tilde{Q}_c(i, s, j) \leftarrow
+    (1 - \alpha)\tilde{Q}_c(i, s, j) + \alpha \gamma^N[\tilde{Q}_r(j, s', \pi_j(s'))]   \mbox{if $s' \in T_i$} \\
+    %\end{array} \right.
     \label{eq:TdQc}
 \end{equation}
 
 \begin{equation}
     \tilde{Q}_e(i, s, a) \leftarrow 
-    \left\{\begin{array}{ll}
-        (1 - \alpha)\tilde{Q}_e(i, s, a) + \alpha \gamma^N[\tilde{Q}_e(i, s', \pi_i(s'))] & \mbox{if $s' \in S_i$} \\
-        (1 - \alpha)\tilde{Q}_e(i, s, a) + \alpha \gamma^N[\tilde{Q}(k, s', \pi_k(s'))] & \mbox{if $s' \in T_i$} \\
-    \end{array} \right.
+    %\left\{\begin{array}{ll}
+        (1 - \alpha)\tilde{Q}_e(i, s, a) + \alpha \gamma^N[\tilde{Q}_e(i, s', \pi_i(s'))]  \mbox{if $s' \in S_i$} \\
+\end{equation}
+\begin{equation}
+    \tilde{Q}_e(i, s, a) \leftarrow 
+        (1 - \alpha)\tilde{Q}_e(i, s, a) + \alpha \gamma^N[\tilde{Q}(k, s', \pi_k(s'))]  \mbox{if $s' \in T_i$} \\
+    %\end{array} \right.
     \label{eq:TdQe}
 \end{equation}
 
+
+where $j' = max_a \tilde{Q}(i', s', a)$.
+Unfortunately, the convergence of online HORDQ-learning is an open problem of the field \cite{HORDQ}.
+However, if we let all subtasks $\in TC(H)$ to have access to all primitive actions directly, 
+the convergence to the optimal policy can be guaranteed. 
 \begin{theorem}
     If $TC(H)$ is a total leaf cover 
     and $\tilde{Q}_r, \tilde{Q}_c, and \tilde{Q}_e$ of every subtask $\in TC(H)$ are updated with above equations, 
@@ -466,8 +505,6 @@ use temporal difference learning instead:
 %If we let all nodes which are the parent of some primitive Max nodes to have access
 %to all primitive actions, we can construct $\mathbb{C}$ by including all 
 %such nodes. 
-Since the optimal policy does not depend on any subtasks $\notin TC(H)$, 
-we can safely apply any approximated model-based approach to such subtasks.
 
 The problem of this hierarchical optimal approach is that policy $\pi_i$ of subtask $M_i$
 is determined by the expected cumulative reward, there are no pseudo reward allowed as
@@ -510,8 +547,6 @@ in the early stage, and gradually decrease it to 0.
 %to execute the plan. If everything works a李世光s the plan, the agent would converge to the optimal
 %policy in a short time. If not (following the plan is worse than the penalty term),
 %the model-free node will take control and find the optimal policy on its own.
-
-
 
 \section{Model-based method}
 \label{se:Model}
@@ -671,14 +706,14 @@ the instruction of its parent strictly.
 
 On other hand, if we do not impose any pseudo reward, 
 the optimal policy can be learned, but the learning rate is
-slower than flat SARSA learning. Since the subtask has no
+slower than flat Sarsa(0) learning. Since the subtask has no
 incentive to follow the instruction from the hierarchy, 
-the learning process is similar to flat SARSA learning 
+the learning process is similar to flat Sarsa(0) learning 
 except it has six different Q-functions to learn (one for each subtask) instead of one.
 Thus it takes longer to learn the optimal policy. 
 
 With appropriate pseudo reward, we can get a near-optimal policy
-while the convergence rate is faster than flat SARSA learning.
+while the convergence rate is faster than flat Sarsa(0) learning.
 Our experiment shows that a pseudo reward of +5 is enough to make subtask $Move(t)$ follow 
 the order of $Root$ in most of the times, but it is not enough for the subtask to ignore
 the breakdown penalty. When $Root$ executes $Move(4)$ to move the bus from area 
@@ -695,7 +730,7 @@ $Move(t)$ will follow the instruction of $Root$ at any cost.
 
 To simulate the performance of the combination of poorly-approximated model-based method and 
 HORDQ, we replaced our model-based approach with random one.
-The result is shown in Figure \ref{fig:res}. In this case, flat SARSA learning has the fastest
+The result is shown in Figure \ref{fig:res}. In this case, flat Sarsa(0) learning has the fastest
 learning rate. It takes more time for $Move(t)$ to realize that the policy of $Root$ is bad with higher pseudo rewards.
 Nevertheless, it will eventually learn to a near-optimal policy.
 The combination of random policy and MAXQ has the worst result.
@@ -723,6 +758,11 @@ policy even when the model is biased.
 Our work is general and can be combined with any model-based methods. 
 A future direction is to investigate the applicability of combining our method with
 other approximated model-based approaches.
+
+%TODO: test on Linear approximation??
+%TODO: test on Sutton's approach
+%TODO: test with biased model only???
+
 %In this work we studied both object category and instance
 %recognition using the RGB-D Object Dataset [14], a large
 %RGB-D (color+depth) dataset of everyday objects. Our work

@@ -1,3 +1,30 @@
+
+Since the optimal policy does not depend on any subtasks $\notin TC(H)$, 
+we can safely apply any approximated model-based approach to such subtasks.
+%---------------
+Let $\pi_{\bar{\mathbb{C}}}: \mathbb{C}(H) \times S \rightarrow \mathbb{C}(H)$ be the policy to invoke
+the next subtask $j = \pi_{\bar{\mathbb{C}}}(i, s)$ which belongs to $\mathbb{C}(H)$. It is determined
+by the policy of subtasks which do not belong to $\mathbb{C}(H)$ and terminate predicate $T_i$. Follow Bellman's equation, we have:
+\begin{align}
+    Q^{\pi}(i, s, a) &= \sum_{s'} P^{\pi}(\pi_{\bar{\mathbb{C}}}(i, s'), s'|i, s, a) [R(s', s, a) + \gamma Q^{\pi}(\pi_{\bar{\mathbb{C}}}(i, s'), s', \pi_i(s'))]\\
+    &=\sum_{s'}P^{\pi}(\pi_{\bar{\mathbb{C}}}(i, s')| i, s, a, s') P(s' | i, s, a)  [R(s', s, a) + \gamma Q^{\pi}(\pi_{\bar{\mathbb{C}}}(i, s'), s', \pi_i(s'))]\\
+    &\mbox{since $\pi_{\bar{\mathbb{C}}}$ is a deterministic policy}\\
+    &=\sum_{s'} P(s' | s, a) [R(s', s, a) + \gamma Q^{\pi}(\pi_{\bar{\mathbb{C}}}(i, s'), s', \pi_i(s'))]
+    \label{eq:MaxIrr}
+\end{align}
+
+Compare to the Bellman equation of the flat MDP:
+\begin{equation}
+    Q^{\pi_f}(s, a) = \sum_{s'}P(s'|s, a)[R(s', s, a) + \gamma Q^{\pi_f}(s', \pi_f(s'))].
+    \label{eq:bellman}
+\end{equation}
+
+The equations \ref{eq:MaxIrr} and \ref{eq:bellman} are identical except for the Q values.
+Due to uniqueness of Bellman equation, if $\pi_i(s) = \pi_f(s), \forall s$, we will have $Q^{\pi_f}(s, a) = Q^{\pi_f}(i, s, a)$. 
+If $\pi_i(s) = \pi^*_f(s)$, $Q^*(s, a)$ is a solution and also an optimal solution (why?) of equation \ref{eq:MaxIrr}.
+Thus we have $Q^*(i, s, a) = Q^*(s, a)$. \textbf{Q.E.D.}
+
+-------------------------
 There are three definitions of optimality of hierarchical reinforcement learning:
 
 \begin{definition}
