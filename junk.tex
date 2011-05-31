@@ -236,6 +236,20 @@ to have access to the primitive actions which are essential for them to finish
 the task on its own. For the taxi problem, we require that both Get and Put tasks
 are able to solve the problem on their own.
 
+In reinforcement learning, an agent interacts with the environment, learning through trial-and-error
+based on scalar reward signals. Many reinforcement learning algorithms estimate values for states to
+enable selection of maximally rewarding actions. Obtaining confidence intervals on these estimates
+has been shown to be useful in practice, including directing exploration [17, 19] and deciding when
+to exploit learned models of the environment [3]. Moreover, there are several potential applications
+using confidence estimates, such as teaching interactive agents (using confidence estimates as feedback),
+adjusting behaviour in non-stationary environments and controlling behaviour in a parallel
+multi-task reinforcement learning setting
+
+Hierarchical reinforcement learning [1] offers an appealing family of approaches to scaling up standard
+reinforcement learning (RL) [2] methods by enabling the use of both low-level primitive actions
+and higher-level macro-actions (or skills). A core research goal in hierarchical RL is the development
+of methods by which an agent can autonomously acquire its own high-level skills.
+
 %---------------------------------------
 
 Reinforcement learning methods can broadly be divided into two classes, model-based and model-free. Consider the problem illustrated in the
